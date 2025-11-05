@@ -1,0 +1,37 @@
+# Created by .ignore support plugin (A)
+
+# User-specific files
+*.user
+*.useros
+*.suo
+*.ide
+*.project
+.idea/
+.vscode/
+
+# Build artifacts
+build/
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# Local properties
+local.properties
+
+# Keystore files
+*.jks
+*.keystore
+
+# External native build
+.externalNativeBuild/
+
+# Gradle files
+.gradle/
+captures/
+*.jar
+*.log
+
+# Caches
+.cxx/
