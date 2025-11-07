@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">WootecoOnDeviceAi</string>
+
+    <string name="button_camera">카메라 실행</string>
+    <string name="button_gallery">갤러리에서 선택</string>
+    <string name="textview_result_placeholder">[분석 결과가 여기에 표시됩니다]</string>
+
 </resources>
