@@ -2,6 +2,7 @@ package com.example.wootecoondeviceai.ml
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.task.vision.segmenter.ImageSegmenter
 import org.tensorflow.lite.task.vision.segmenter.OutputType
@@ -68,7 +69,7 @@ class ImageSegmenterService(
 
         maskBuffer.rewind()
         while (maskBuffer.hasRemaining()) {
-            foundIndices.add(maskBuffer.get().toInt())
+            foundIndices.add(maskBuffer.get().toUByte().toInt())
         }
 
         return foundIndices
@@ -78,6 +79,108 @@ class ImageSegmenterService(
         return indices
             .mapNotNull { PASCAL_VOC_LABELS.getOrNull(it) }
             .distinct()
+    }
+
+    fun removePixels(
+        bitmap: Bitmap,
+        result: SegmentationResult,
+        keyword: String
+    ): Bitmap? {
+        try {
+            val targetIndex = findTargetIndex(keyword) ?: return null
+
+            return createMaskedBitmap(
+                bitmap,
+                result.maskBuffer.rewind() as ByteBuffer,
+                result.maskWidth,
+                result.maskHeight,
+                targetIndex
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    private fun findTargetIndex(keyword: String): Int? {
+        val index = PASCAL_VOC_LABELS.indexOf(keyword.lowercase())
+        return if (index != -1) index else null
+    }
+
+    private fun createMaskedBitmap(
+        originalBitmap: Bitmap,
+        maskBuffer: ByteBuffer,
+        maskWidth: Int,
+        maskHeight: Int,
+        targetIndex: Int
+    ): Bitmap {
+        val newBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val width = originalBitmap.width
+        val height = originalBitmap.height
+        val pixels = IntArray(width * height)
+        newBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        applyMaskToPixelArray(
+            pixels, width, height,
+            maskBuffer, maskWidth, maskHeight,
+            targetIndex
+        )
+
+        newBitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+
+        return newBitmap
+    }
+
+    private fun applyMaskToPixelArray(
+        pixels: IntArray,
+        width: Int, height: Int,
+        maskBuffer: ByteBuffer, maskWidth: Int, maskHeight: Int,
+        targetIndex: Int
+    ) {
+        val xScale = maskWidth.toFloat() / width
+        val yScale = maskHeight.toFloat() / height
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                processSinglePixel(
+                    pixels, x, y, width,
+                    maskBuffer, maskWidth,
+                    xScale, yScale, targetIndex
+                )
+            }
+        }
+    }
+
+    private fun processSinglePixel(
+        pixels: IntArray,
+        x: Int, y: Int, width: Int,
+        maskBuffer: ByteBuffer, maskWidth: Int,
+        xScale: Float, yScale: Float, targetIndex: Int
+    ) {
+        val classIndex = getMaskIndexAt(
+            x, y, xScale, yScale,
+            maskBuffer, maskWidth
+        )
+
+        if (classIndex == targetIndex) {
+            pixels[y * width + x] = Color.TRANSPARENT
+        }
+    }
+
+    private fun getMaskIndexAt(
+        x: Int, y: Int,
+        xScale: Float, yScale: Float,
+        maskBuffer: ByteBuffer, maskWidth: Int
+    ): Int {
+        val maskX = ((x + 0.5f) * xScale).toInt()
+        val maskY = ((y + 0.5f) * yScale).toInt()
+
+        val safeMaskX = maskX.coerceIn(0, maskWidth - 1)
+        val safeMaskY = maskY.coerceIn(0, (maskBuffer.capacity() / maskWidth) - 1)
+
+        val index = safeMaskY * maskWidth + safeMaskX
+
+        return maskBuffer.get(index).toUByte().toInt()
     }
 
     companion object {
