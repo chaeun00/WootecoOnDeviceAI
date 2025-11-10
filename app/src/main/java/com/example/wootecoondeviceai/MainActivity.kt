@@ -3,9 +3,14 @@ package com.example.wootecoondeviceai
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import android.net.Uri
 import android.os.Bundle
+import android.os.Build
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -34,6 +39,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    private val pickImageLauncher =
+        registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            if (uri != null) {
+                Log.d(TAG, "갤러리에서 Uri 받음: $uri")
+                val bitmap = uriToBitmap(uri)
+                analyzeImage(bitmap)
+            } else {
+                Log.w(TAG, "갤러리에서 Uri가 null임 (선택 취소)")
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -42,6 +58,11 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnCamera.setOnClickListener {
             checkCameraPermissionAndLaunch()
+        }
+
+        binding.btnGallery.setOnClickListener {
+            Log.d(TAG, "갤러리 버튼 클릭됨")
+            pickImageLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
     }
 
@@ -83,6 +104,30 @@ class MainActivity : AppCompatActivity() {
         } catch (e: IllegalArgumentException) {
             Log.e(TAG, "이미지 분석 실패: ${e.message}", e)
             return getString(R.string.text_analysis_failed)
+        }
+    }
+
+    private fun uriToBitmap(uri: Uri): Bitmap? {
+        return try {
+            decodeBitmapFromUri(uri)
+        } catch (e: Exception) {
+            Log.e(TAG, "Uri를 Bitmap으로 변환 실패: ${e.message}", e)
+            null
+        }
+    }
+
+    private fun decodeBitmapFromUri(uri: Uri): Bitmap? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val source = ImageDecoder.createSource(this.contentResolver, uri)
+            return ImageDecoder.decodeBitmap(source).copy(Bitmap.Config.ARGB_8888, false)
+        } else {
+            @Suppress("DEPRECATION")
+            val originalBitmap = MediaStore.Images.Media.getBitmap(this.contentResolver, uri)
+            return if (originalBitmap.config != Bitmap.Config.ARGB_8888) {
+                originalBitmap.copy(Bitmap.Config.ARGB_8888, false)
+            } else {
+                originalBitmap
+            }
         }
     }
 
