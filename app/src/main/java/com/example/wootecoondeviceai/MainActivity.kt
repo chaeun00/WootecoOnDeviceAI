@@ -2,6 +2,7 @@ package com.example.wootecoondeviceai
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -9,18 +10,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.wootecoondeviceai.databinding.ActivityMainBinding
+import com.example.wootecoondeviceai.ml.Classifier
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
 
+    private val classifier by lazy { Classifier(this) }
+
     private val takePictureLauncher =
         registerForActivityResult(ActivityResultContracts.TakePicturePreview())  { bitmap ->
-            if (bitmap != null) {
-                Log.d(TAG, "사진 비트맵 받음")
-                binding.ivPreview.setImageBitmap(bitmap)
-            } else  {
-                Log.w(TAG, "사진 비트맵이 null임")
-            }
+            analyzeImage(bitmap)
         }
 
     private val requestPermissionLauncher =
@@ -59,6 +58,31 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "권한 없음. 권한 요청.")
                 requestPermissionLauncher.launch(Manifest.permission.CAMERA)
             }
+        }
+    }
+
+    private fun analyzeImage(bitmap: Bitmap?) {
+        if (bitmap == null) {
+            Log.w(TAG, "사진 비트맵이 null임")
+            return
+        }
+
+        binding.ivPreview.setImageBitmap(bitmap)
+        binding.tvResult.text = getString(R.string.text_analyzing)
+
+        val resultText = runClassification(bitmap)
+        binding.tvResult.text = resultText
+    }
+
+    private fun runClassification(bitmap: Bitmap): String {
+        try {
+            val result = classifier.classify(bitmap)
+            return result.joinToString("\n") {
+                "${it.label} (${(it.confidence * 100).toInt()}%)"
+            }
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "이미지 분석 실패: ${e.message}", e)
+            return getString(R.string.text_analysis_failed)
         }
     }
 
