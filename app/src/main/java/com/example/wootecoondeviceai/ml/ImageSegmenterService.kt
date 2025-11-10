@@ -172,8 +172,8 @@ class ImageSegmenterService(
         xScale: Float, yScale: Float,
         maskBuffer: ByteBuffer, maskWidth: Int
     ): Int {
-        val maskX = ((x + 0.5f) * xScale).toInt()
-        val maskY = ((y + 0.5f) * yScale).toInt()
+        val maskX = ((x + ROUNDING_OFFSET) * xScale).toInt()
+        val maskY = ((y + ROUNDING_OFFSET) * yScale).toInt()
 
         val safeMaskX = maskX.coerceIn(0, maskWidth - 1)
         val safeMaskY = maskY.coerceIn(0, (maskBuffer.capacity() / maskWidth) - 1)
@@ -191,5 +191,7 @@ class ImageSegmenterService(
             "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike",
             "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"
         )
+
+        private const val ROUNDING_OFFSET = 0.5f
     }
 }

@@ -36,7 +36,7 @@ class ImageSegmenterServiceTest {
         assertNotNull("결과 비트맵이 null이면 안 됩니다.", newBitmap)
         assertNotSame("결과 비트맵은 원본 비트맵과 다른 객체여야 합니다.", testImage, newBitmap)
 
-        val targetIndex = 15
+        val targetIndex = PERSON_CLASS_INDEX
         checkPixelTransparency(result, newBitmap!!, targetIndex)
     }
 
@@ -85,8 +85,8 @@ class ImageSegmenterServiceTest {
         maskBuffer: ByteBuffer, maskWidth: Int,
         xScale: Float, yScale: Float, targetIndex: Int
     ): Boolean {
-        val maskX = ((x + 0.5f) * xScale).toInt()
-        val maskY = ((y + 0.5f) * yScale).toInt()
+        val maskX = ((x + ROUNDING_OFFSET) * xScale).toInt()
+        val maskY = ((y + ROUNDING_OFFSET) * yScale).toInt()
 
         val safeMaskX = maskX.coerceIn(0, maskWidth - 1)
         val safeMaskY = maskY.coerceIn(0, (maskBuffer.capacity() / maskWidth) - 1)
@@ -112,5 +112,7 @@ class ImageSegmenterServiceTest {
     companion object {
         private const val TEST_MODEL_NAME = "deeplabv3_with_metadata.tflite"
         private const val TEST_IMAGE_NAME = "person_test.jpg"
+        private const val PERSON_CLASS_INDEX = 15
+        private const val ROUNDING_OFFSET = 0.5f
     }
 }
