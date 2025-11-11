@@ -9,4 +9,7 @@
 
     <string name="text_analyzing">분석 중...</string>
     <string name="text_analysis_failed">분석에 실패했습니다.</string>
+
+    <string name="label_segmentation_chips">제거할 대상을 선택:</string>
+    <string name="text_removal_complete">\'%1$s\' 제거 완료</string>
 </resources>
