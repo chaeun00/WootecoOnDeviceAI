@@ -19,6 +19,7 @@ import com.example.wootecoondeviceai.databinding.ActivityMainBinding
 import com.example.wootecoondeviceai.ml.Classifier
 import com.example.wootecoondeviceai.ml.ClassificationResult
 import com.example.wootecoondeviceai.ml.ImageSegmenterService
+import com.example.wootecoondeviceai.ml.InpainterService
 import com.example.wootecoondeviceai.ml.SegmentationResult
 import com.google.android.material.chip.Chip
 import kotlinx.coroutines.Dispatchers
@@ -30,9 +31,11 @@ class MainActivity : AppCompatActivity() {
 
     private val classifier by lazy { Classifier(this) }
     private val segmenterService by lazy { ImageSegmenterService(this) }
+    private val inpainterService by lazy { InpainterService() }
 
     private var originalBitmap: Bitmap? = null
     private var segmentationResult: SegmentationResult? = null
+    private var maskedBitmap: Bitmap? = null
 
     private val takePictureLauncher =
         registerForActivityResult(ActivityResultContracts.TakePicturePreview())  { bitmap ->
@@ -64,7 +67,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -75,6 +77,10 @@ class MainActivity : AppCompatActivity() {
         binding.btnGallery.setOnClickListener {
             Log.d(TAG, "갤러리 버튼 클릭됨")
             pickImageLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
+
+        binding.btnInpaint.setOnClickListener {
+            performInpainting()
         }
     }
 
@@ -96,6 +102,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun analyzeImage(bitmap: Bitmap) {
         originalBitmap = bitmap
+        maskedBitmap = null
 
         binding.ivPreview.setImageBitmap(bitmap)
         binding.tvResult.text = getString(R.string.text_analyzing)
@@ -166,15 +173,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performPixelRemoval(keyword: String) {
-        val bitmap = originalBitmap
+        val bitmapToProcess = originalBitmap
         val result = segmentationResult
-        if (bitmap == null || result == null) {
+        if (bitmapToProcess == null || result == null) {
             Log.w(TAG, "픽셀 제거 실패: 원본 비트맵 또는 분석 결과가 없습니다.")
             return
         }
 
         binding.tvResult.text = getString(R.string.text_analyzing)
-        launchPixelRemovalJob(bitmap, result, keyword)
+        launchPixelRemovalJob(bitmapToProcess, result, keyword)
     }
 
     private fun launchPixelRemovalJob(
@@ -186,6 +193,8 @@ class MainActivity : AppCompatActivity() {
             val removedBitmap = withContext(Dispatchers.Default) {
                 segmenterService.removePixels(bitmap, result, keyword)
             }
+
+            maskedBitmap = removedBitmap
 
             binding.ivPreview.setImageBitmap(removedBitmap)
             val completeMessage = getString(R.string.text_removal_complete, keyword)
@@ -214,6 +223,31 @@ class MainActivity : AppCompatActivity() {
             } else {
                 originalBitmap
             }
+        }
+    }
+
+    private fun performInpainting() {
+        val bitmapToInpaint = maskedBitmap ?: originalBitmap
+
+        if (bitmapToInpaint == null) {
+            Log.w(TAG, "Inpainting 실패: 원본 이미지가 없습니다.")
+            return
+        }
+
+        binding.tvResult.text = getString(R.string.text_analyzing)
+        launchInpaintingJob(bitmapToInpaint)
+    }
+
+    private fun launchInpaintingJob(bitmap: Bitmap) {
+        lifecycleScope.launch {
+            val inpaintedBitmap = withContext(Dispatchers.Default) {
+                inpainterService.fillHoles(bitmap)
+            }
+
+            binding.ivPreview.setImageBitmap(inpaintedBitmap)
+            binding.tvResult.text = getString(R.string.text_inpaint_complete)
+
+            maskedBitmap = null
         }
     }
 

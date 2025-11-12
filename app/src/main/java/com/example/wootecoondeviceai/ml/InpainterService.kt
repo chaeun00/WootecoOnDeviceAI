@@ -8,7 +8,6 @@ class InpainterService
     fun fillHoles(bitmap: Bitmap): Bitmap? {
         return try {
             createInpaintedBitmap(bitmap)
-
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -19,15 +18,33 @@ class InpainterService
         val width = bitmap.width
         val height = bitmap.height
 
-        val readPixels = IntArray(width * height)
-        bitmap.getPixels(readPixels, 0, width, 0, 0, width, height)
-        val writePixels = readPixels.clone()
+        val currentPixels = IntArray(width * height)
+        bitmap.getPixels(currentPixels, 0, width, 0, 0, width, height)
 
-        processPixelArrayInpainting(readPixels, writePixels, width, height)
+        val finalPixels = runInpaintingLoop(currentPixels, width, height)
 
         return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
-            setPixels(writePixels, 0, width, 0, 0, width, height)
+            setPixels(finalPixels, 0, width, 0, 0, width, height)
         }
+    }
+
+
+    private fun runInpaintingLoop(
+        initialPixels: IntArray, width: Int, height: Int
+    ): IntArray {
+        var readPixels = initialPixels
+
+        repeat(MAX_ITERATIONS) {
+            val writePixels = readPixels.clone()
+            processPixelArrayInpainting(readPixels, writePixels, width, height)
+
+            if (readPixels.contentEquals(writePixels)) {
+                return writePixels
+            }
+
+            readPixels = writePixels
+        }
+        return readPixels
     }
 
     private fun processPixelArrayInpainting(
@@ -130,5 +147,9 @@ class InpainterService
         }
 
         return pixelColor
+    }
+
+    companion object {
+        private const val MAX_ITERATIONS = 50
     }
 }

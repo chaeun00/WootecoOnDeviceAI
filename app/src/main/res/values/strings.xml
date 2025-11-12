@@ -12,4 +12,7 @@
 
     <string name="label_segmentation_chips">제거할 대상을 선택:</string>
     <string name="text_removal_complete">\'%1$s\' 제거 완료</string>
+
+    <string name="button_inpaint">자연스럽게 채우기</string>
+    <string name="text_inpaint_complete">픽셀 채우기 완료</string>
 </resources>

@@ -67,6 +67,17 @@
             app:singleLine="true" />
     </HorizontalScrollView>
 
+    <Button
+        android:id="@+id/btn_inpaint"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="8dp"
+        android:text="@string/button_inpaint"
+        app:layout_constraintTop_toBottomOf="@id/hsv_chip_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <TextView
         android:id="@+id/tv_result"
         android:layout_width="0dp"
